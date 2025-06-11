@@ -28,9 +28,86 @@ public:
 	bool IsVertical(Position D);
 	bool IsHorizontal(Position D);
 	bool IsDiagonal(Position D);
+	bool IsVerticalPathClear(Position D);
+	bool IsHorizontalPathClear(Position D);
+	bool IsDiagonalPathClear(Position D);
+
 	
 
 };
+
+class King :public Piece
+{
+public:
+	King(int px, int py, PColor _c, Board* b, int c, int r, Texture2D tex);
+
+	//void Draw(int squaresize);
+	bool IsLegalMove(Position D)override;
+
+};
+
+
+
+class Queen : public Piece
+{
+public:
+	Queen(int px, int py, PColor _c, Board * b, int c, int r, Texture2D tex);
+
+	//void Draw(int squaresize);
+	bool IsLegalMove(Position D) override;
+
+};
+
+class Bishop :public Piece
+{
+public:
+	Bishop(int px, int py, PColor _c, Board* b, int c, int r, Texture2D tex);
+
+	void Draw();
+	bool IsLegalMove(Position D) override;
+
+};
+
+class Knight :public Piece
+{
+public:
+	Knight(int px, int py, PColor _c, Board* b, int c, int r, Texture2D tex);
+
+	void Draw();
+	bool IsLegalMove(Position D)override;
+
+};
+
+
+class Pawn : public Piece
+{
+public:
+	Pawn(int px, int py, PColor _c, Board* b, int c, int r, Texture2D tex);
+
+	//void Draw()override;
+	bool IsLegalMove(Position D)override;
+
+};
+
+class Rook :public Piece
+{
+public:
+	Rook(int px, int py, PColor _c, Board* b, int c, int r, Texture2D tex);
+
+	void Draw();
+	bool IsLegalMove(Position D)override;
+
+};
+
+
+
+
+
+
+
+
+
+
 
 
 
