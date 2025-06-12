@@ -1,9 +1,12 @@
+#include "Board.h"
 #include"Peice.h"
 #include<iostream>
-#include"Board.h"
+
 using namespace std;
 
+
 Texture2D queenW, queenB, kingW, kingB, pawnW, pawnB, rookW, rookB, bishopW, bishopB, knightW, knightB;
+
 void Board::LoadTextures()
 {
 	queenW = LoadTexture("queen-W.png");
@@ -20,6 +23,8 @@ void Board::LoadTextures()
 	knightB = LoadTexture("knight-B.png");
 
 }
+
+
 
 Board::Board()
 {
@@ -72,28 +77,251 @@ Board::~Board()
 			delete Ps[i][j];
 }
 
-
 void Board::TakeCoordinates(Position& P)
 {
 	cin >> P.x >> P.y;
 
 }
-
 bool Board::IsValidSource(Position S)
 {
-	if (Ps[S.x][S.y] == nullptr) { return false; }
-
+	if (Ps[S.x][S.y] == nullptr)
+	{
+		return false;
+	}
 	return Ps[S.x][S.y]->getClr() == Turn;
 }
-
-
 bool Board::IsValidDestination(Position P)
 {
-	if (P.x < 0 || P.x >7 || P.y < 0 || P.y >7) { return false; }
-
-	if (Ps[P.x][P.y] != nullptr){
-
-		if (Ps[P.x][P.y]->getClr() == Turn) { return false; }
+	if (P.x < 0 || P.x >7 || P.y < 0 || P.y >7)
+	{
+		return false;
+	}
+	if (Ps[P.x][P.y] != nullptr)
+	{
+		if (Ps[P.x][P.y]->getClr() == Turn)
+		{
+			return false;
+		}
+	}
+	return true;
 }
+
+
+void Board::Play()
+{
+
+
+	while (!WindowShouldClose()) {
+		BeginDrawing();
+		ClearBackground(RAYWHITE);
+
+
+
+		if (!Gameover) {
+			Update();
+		}
+		DisplayBoard();
+		if (Gameover && IsKeyPressed(KEY_ESCAPE)) {
+			CloseWindow();
+			exit(0);
+		}
+
+
+		EndDrawing();
+	}
+	CloseWindow();
+}
+
+
+
+
+void Board::DisplayBoard() {
+	int squareSize = 80;
+	for (int row = 0; row < 8; row++) {
+		for (int col = 0; col < 8; col++) {
+			Color squareColor = ((row + col) % 2 == 0) ? LIGHTGRAY : DARKGRAY;
+			DrawRectangle(col * squareSize, row * squareSize, squareSize, squareSize, squareColor);
+
+			if (Ps[row][col] != nullptr)
+			{
+				//cout << "Piece exists at " << row << ", " << col << endl;
+				Ps[row][col]->Draw(squareSize);
+				//cout << "Drawing piece at " << row << ", " << col << endl;
+			}
+		}
+	}
+	if (Gameover) {
+		DrawRectangle(100, 150, 500, 200, Fade(RAYWHITE, 0.85f));
+		DrawText("CHECKMATE!", 230, 180, 40, RED);
+
+		const char* winnerText = (winner == PWHITE) ? "White Wins" : "Black Wins";
+		DrawText(winnerText, 260, 240, 30, DARKBLUE);
+		DrawText("Press ESC to exit", 250, 290, 20, GRAY);
+	}
+
+}
+
+void Board::Update() {
+	if (Gameover)
+	{
+		return;
+	}
+
+	if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+		Vector2 mouse = GetMousePosition();
+		int col = (int)mouse.x / 80;
+		int row = (int)mouse.y / 80;
+		Position clicked{ row, col };
+
+		if (!selected) {
+			if (IsValidSource(clicked)) {
+				selectedPos = clicked;
+				selected = true;
+			}
+		}
+		else {
+			if ((IsValidDestination(clicked) && Ps[selectedPos.x][selectedPos.y]->IsLegalMove(clicked))) {
+				Ps[selectedPos.x][selectedPos.y]->move(clicked);
+				MoveOnBoard(selectedPos, clicked);
+
+				Turn = (Turn == PBLACK) ? PWHITE : PBLACK;
+				if (IsCheckmate(Turn)) {
+					Gameover = true;
+					winner = (Turn == PWHITE ? PBLACK : PWHITE); // Because Turn has already switched
+				}
+
+			}
+			selected = false;
+		}
+
+	}
+}
+
+void Board::MoveOnBoard(Position S, Position D)
+{
+	Ps[D.x][D.y] = Ps[S.x][S.y];
+	Ps[S.x][S.y] = nullptr;
+}
+Piece* Board::PieceAt(Position P)
+{
+	return Ps[P.x][P.y];
+}
+void Board::Unhighlight(Position S)
+{
+	for (int r = 0; r < 8; r++)
+	{
+		for (int c = 0; c < 8; c++)
+		{
+			Copy[r][c] = false;
+		}
+	}
+
+}
+
+void Board::Highlight(Position S)
+{
+	//cout << "Highlight called\n";
+	Unhighlight(S);
+
+	if (Ps[S.x][S.y] == nullptr)
+		return;
+
+
+	for (int r = 0; r < 8; r++)
+	{
+		for (int c = 0; c < 8; c++)
+		{
+			Position end{ r, c };
+
+			if (IsValidDestination(end) && Ps[S.x][S.y]->IsLegalMove(end) && !IsCheck(Turn))
+			{
+				Copy[r][c] = true;
+			}
+
+		}
+	}
+}
+Position Board::FindKing(PColor Turn)
+{
+	for (int r = 0; r < 8; r++) {
+		for (int c = 0; c < 8; c++) {
+			if (Ps[r][c] != nullptr &&
+				Ps[r][c]->getClr() == Turn &&
+				dynamic_cast<King*>(Ps[r][c]) != nullptr) {
+				return { r, c };
+			}
+		}
+	}
+
+	return { -1, -1 };
+}
+
+bool Board::IsCheck(PColor Turn)
+{
+	PColor OppTurn = (Turn == PBLACK) ? PWHITE : PBLACK;
+	Position P = FindKing(Turn);
+	for (int i = 0; i < 8; i++)
+	{
+		for (int j = 0; j < 8; j++)
+		{
+
+			if (Ps[i][j] != nullptr && Ps[i][j]->getClr() == OppTurn)
+			{
+				if (Ps[i][j]->IsLegalMove(P))
+				{
+					return true;
+				}
+			}
+		}
+	}
+	return false;
+}
+void Board::WarnIfCheck(PColor Turn)
+{
+	if (IsCheck(Turn))
+	{
+		cout << "Your King is under Check!!!!!!!\n";
+	}
+}
+
+
+bool Board::IsCheckmate(PColor Turn)
+{
+	if (!IsCheck(Turn))
+		return false;
+
+	for (int r = 0; r < 8; r++)
+	{
+		for (int c = 0; c < 8; c++)
+		{
+			if (Ps[r][c] != nullptr && Ps[r][c]->getClr() == Turn)
+			{
+				for (int r2 = 0; r2 < 8; r2++)
+				{
+					for (int c2 = 0; c2 < 8; c2++)
+					{
+						Position dest{ r2, c2 };
+						if (Ps[r][c]->IsLegalMove(dest) && IsValidDestination(dest))
+						{
+
+							Piece* temp = Ps[r2][c2];
+							Ps[r2][c2] = Ps[r][c];
+							Ps[r][c] = nullptr;
+
+							bool stillInCheck = IsCheck(Turn);
+
+
+							Ps[r][c] = Ps[r2][c2];
+							Ps[r2][c2] = temp;
+
+							if (!stillInCheck)
+								return false;
+						}
+					}
+				}
+			}
+		}
+	}
+
 	return true;
 }

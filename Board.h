@@ -11,7 +11,9 @@ class Board
     static void TakeCoordinates(Position& P);
     bool IsValidSource(Position S);
     bool IsValidDestination(Position P);
+    PColor winner;
 
+    bool Gameover = false;
     bool selected;
     Position selectedPos;
 
@@ -19,10 +21,23 @@ class Board
 public:
     Board();
     ~Board();
-    //void Play();
+   
     void DisplayBoard();
     void LoadTextures();
+    void Play();
+
     void Update();
+
+    Piece* PieceAt(Position P);
+    void MoveOnBoard(Position S, Position D);
+    void Highlight(Position S);
+    void Unhighlight(Position S);
+    Position FindKing(PColor Turn);
+    bool IsCheck(PColor Turn);
+    void WarnIfCheck(PColor Turn);
+    bool IsCheckmate(PColor Turn);
+  
+
 };
 
 #endif 
