@@ -1,5 +1,5 @@
-#include "Board.h"
 #include"Peice.h"
+#include"Board.h"
 #include<iostream>
 
 using namespace std;
@@ -50,6 +50,12 @@ Board::Board()
 		}
 
 	}
+
+	SetBoard();
+	Turn = PWHITE;
+}
+void Board::SetBoard()
+{
 	Ps[0][0] = new Rook(0, 0, PBLACK, this, 0, 0, rookB);
 	Ps[0][7] = new Rook(0, 7, PBLACK, this, 7, 0, rookB);
 	Ps[0][1] = new Knight(0, 1, PBLACK, this, 1, 0, knightB);
@@ -67,8 +73,6 @@ Board::Board()
 	Ps[7][5] = new Bishop(7, 5, PWHITE, this, 5, 7, bishopW);
 	Ps[7][3] = new Queen(7, 3, PWHITE, this, 3, 7, queenW);
 	Ps[7][4] = new King(7, 4, PWHITE, this, 4, 7, kingW);
-
-	Turn = PWHITE;
 }
 Board::~Board()
 {
@@ -107,7 +111,7 @@ bool Board::IsValidDestination(Position P)
 }
 
 
-void Board::Play()
+void Board::PlayN()
 {
 
 
@@ -144,9 +148,9 @@ void Board::DisplayBoard() {
 
 			if (Ps[row][col] != nullptr)
 			{
-				//cout << "Piece exists at " << row << ", " << col << endl;
+
 				Ps[row][col]->Draw(squareSize);
-				//cout << "Drawing piece at " << row << ", " << col << endl;
+
 			}
 		}
 	}
@@ -187,7 +191,7 @@ void Board::Update() {
 				Turn = (Turn == PBLACK) ? PWHITE : PBLACK;
 				if (IsCheckmate(Turn)) {
 					Gameover = true;
-					winner = (Turn == PWHITE ? PBLACK : PWHITE); // Because Turn has already switched
+					winner = (Turn == PWHITE ? PBLACK : PWHITE);
 				}
 
 			}
@@ -199,6 +203,7 @@ void Board::Update() {
 
 void Board::MoveOnBoard(Position S, Position D)
 {
+
 	Ps[D.x][D.y] = Ps[S.x][S.y];
 	Ps[S.x][S.y] = nullptr;
 }
@@ -206,41 +211,7 @@ Piece* Board::PieceAt(Position P)
 {
 	return Ps[P.x][P.y];
 }
-void Board::Unhighlight(Position S)
-{
-	for (int r = 0; r < 8; r++)
-	{
-		for (int c = 0; c < 8; c++)
-		{
-			Copy[r][c] = false;
-		}
-	}
 
-}
-
-void Board::Highlight(Position S)
-{
-	//cout << "Highlight called\n";
-	Unhighlight(S);
-
-	if (Ps[S.x][S.y] == nullptr)
-		return;
-
-
-	for (int r = 0; r < 8; r++)
-	{
-		for (int c = 0; c < 8; c++)
-		{
-			Position end{ r, c };
-
-			if (IsValidDestination(end) && Ps[S.x][S.y]->IsLegalMove(end) && !IsCheck(Turn))
-			{
-				Copy[r][c] = true;
-			}
-
-		}
-	}
-}
 Position Board::FindKing(PColor Turn)
 {
 	for (int r = 0; r < 8; r++) {
@@ -322,6 +293,111 @@ bool Board::IsCheckmate(PColor Turn)
 			}
 		}
 	}
-
 	return true;
 }
+void Board::MakeAIMove() {
+	vector<pair<Piece*, Position>> possibleMoves;
+
+
+	PColor oldTurn = Turn;
+	Turn = PWHITE;
+
+	for (int r = 0; r < 8; r++) {
+		for (int c = 0; c < 8; c++) {
+			if (Ps[r][c] != nullptr && Ps[r][c]->getClr() == PWHITE) {
+				for (int r2 = 0; r2 < 8; r2++) {
+					for (int c2 = 0; c2 < 8; c2++) {
+						Position dest{ r2, c2 };
+
+
+						if (Ps[r][c]->IsLegalMove(dest) && IsValidDestination(dest)) {
+							possibleMoves.push_back({ Ps[r][c], dest });
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if (possibleMoves.empty()) {
+		Turn = oldTurn;
+		return;
+	}
+
+	auto moveChoice = possibleMoves[rand() % possibleMoves.size()];
+	Piece* selectedPiece = moveChoice.first;
+	Position moveTo = moveChoice.second;
+	Position startPos = selectedPiece->GetPosition();
+
+	if (Ps[moveTo.x][moveTo.y] != nullptr) {
+		delete Ps[moveTo.x][moveTo.y];
+	}
+
+	Ps[moveTo.x][moveTo.y] = selectedPiece;
+	Ps[startPos.x][startPos.y] = nullptr;
+	selectedPiece->move(moveTo);
+
+
+	if (IsCheckmate(PBLACK)) {
+		Gameover = true;
+		winner = PWHITE;
+	}
+
+	Turn = oldTurn == PWHITE ? PBLACK : PWHITE;
+}
+
+
+
+
+
+void Board::PlayAI() {
+	while (!WindowShouldClose()) {
+		BeginDrawing();
+		ClearBackground(RAYWHITE);
+
+
+
+		DisplayBoard();
+
+		if (!Gameover) {
+			if (Turn == PWHITE) {
+				MakeAIMove();
+			}
+			else {
+				Update();
+			}
+		}
+
+		if (Gameover && IsKeyPressed(KEY_ESCAPE)) {
+			CloseWindow();
+			exit(0);
+		}
+
+		EndDrawing();
+	}
+	CloseWindow();
+}
+void Board::Play()
+{
+	while (!WindowShouldClose())
+	{
+		BeginDrawing();
+		ClearBackground(RAYWHITE);
+		DrawText("Press 1 to manual with AI & 2 for AI", 50, 300, 30, BLACK);
+		if (IsKeyPressed(KEY_ONE))
+		{
+
+			PlayN();
+		}
+		else if (IsKeyPressed(KEY_TWO))
+		{
+
+			PlayAI();
+		}
+
+		EndDrawing();
+	}
+	CloseWindow();
+}
+
+
