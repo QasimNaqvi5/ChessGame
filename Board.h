@@ -1,56 +1,78 @@
-#ifndef BOARD_H
-#define BOARD_H
+#pragma once
+#include"Piece.h"
+#include<fstream>
 
-#include"Peice.h"
-#include<raylib.h>
-#include<vector>
-using namespace std;
-//class Piece;
 class Board
 {
-    PColor Turn;
+private:
     Piece* Ps[8][8];
-    bool Copy[8][8];
-    static void TakeCoordinates(Position& P);
-    bool IsValidSource(Position S);
-    bool IsValidDestination(Position P);
+    COLOUR Turn;
+    Position lastMoveFrom;
+    Position lastMoveTo;
+    bool enPassantPossible;
 
-    bool selected;
-    Position selectedPos;
-    bool Gameover = false;
-    PColor winner;
+    // Castling tracking
+    bool whiteKingMoved;
+    bool whiteRookKingSideMoved;
+    bool whiteRookQueenSideMoved;
+    bool blackKingMoved;
+    bool blackRookKingSideMoved;
+    bool blackRookQueenSideMoved;
+
+    const int Sq_size = 80;
+    Piece* selectedPs;
+    int selectedX, selectedY;
+
+    char promotionChoice;
+    bool isPromoting;
+    Position promotionPos;
 
 public:
     Board();
     ~Board();
-    void PlayN();
-    void DisplayBoard();
-    void LoadTextures();
+    void InitializeBoard();
+    void DrawChessBoard();
+    void playGUI();
+    void play();
+    void load_Board();
+    void restart();
+    bool wouldLeaveKingInCheck(Position from, Position to);
 
-    void Update();
-    void SetBoard();
+    bool temp[8][8];
+    void displayBoard();
+    Piece* pieceAt(Position P);
+    void copyBoard(Board& CP);
+    bool validSource(Position S) const;
+    bool validDestination(Position D) const;
+    void changeTurn();
+    void move(Position S, Position D);
+    void updateBoard(Position S, Position D);
+    void Highlight(Position S);
+    void unHighlight();
+    void loadFromFile();
+    void init();
+    bool isCheck(COLOUR kingColor);
+    bool isCheckmate(COLOUR kingColor);
+    bool isStalemate(COLOUR playerColor);
 
-    Piece* PieceAt(Position P);
-    void MoveOnBoard(Position S, Position D);
+    void handlePromotionInput();
+    void drawPromotionMenu();
+    void PawnPromotion();
 
-    Position FindKing(PColor Turn);
-    bool IsCheck(PColor Turn);
-    void WarnIfCheck(PColor Turn);
-    bool IsCheckmate(PColor Turn);
+    Position findKing(COLOUR kingColor);
+    bool hasLegalMoves(COLOUR playerColor);
+    void handleEnPassant(Position S, Position D);
+    bool handleCastling(Position S, Position D);
+    bool isEnPassantPossible() const { return enPassantPossible; }
 
-    void MakeAIMove();
-    void PlayAI();
-    void Play();
+    // Castling status getters
+    bool hasKingMoved(COLOUR c) const { return c == PWHITE ? whiteKingMoved : blackKingMoved; }
+    bool hasRookMoved(COLOUR c, bool kingSide) const {
+        return c == PWHITE ?
+            (kingSide ? whiteRookKingSideMoved : whiteRookQueenSideMoved) :
+            (kingSide ? blackRookKingSideMoved : blackRookQueenSideMoved);
+    }
 
-
-
-
-
-
-
+    Position getLastMoveFrom() const { return lastMoveFrom; }
+    Position getLastMoveTo() const { return lastMoveTo; }
 };
-
-#endif
-
-
-

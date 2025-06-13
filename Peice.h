@@ -31,6 +31,9 @@ public:
 	bool IsVerticalPathClear(Position D);
 	bool IsHorizontalPathClear(Position D);
 	bool IsDiagonalPathClear(Position D);
+	Position GetPosition();
+	Texture2D GetTexture();
+
 
 	
 
