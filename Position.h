@@ -1,14 +1,9 @@
-#ifndef PEICE_H
-#define PEICE_H
-
+#pragma once
+#include "raylib.h"
 
 struct Position
 {
-	int x;
-	int y;
+	int ri, ci;
 };
-enum PColor
-{
-	PBLACK, PWHITE
-};
-#endif 
+enum COLOUR { PBLACK, PWHITE };
+
