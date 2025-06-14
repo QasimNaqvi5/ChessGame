@@ -1,83 +1,100 @@
-#ifndef PEICE_H
-#define PEICE_H
+#pragma once
+#include "Position.h"
+#include <iostream>
+#include"raylib.h"
 
-#include<iostream>
-#include"Position.h"
-#include<raylib.h>
+
+
+using namespace std;
+const int tileSize = 100;
+
 class Board;
 class Piece
 {
 protected:
 	Position P;
-	PColor C;
+	COLOUR clr;
 	Board* B;
-	int col, row;
-	Texture2D texture;
+	Texture2D textureW;
+	Texture2D textureB;
 
 
+	static bool isVertical(Position S, Position D);
+	static bool isHorizontal(Position S, Position D);
+	static bool isDiagonal(Position S, Position D);
 
-
-
+	bool isVerticalPathClear(Board* b, Position S, Position D);
+	bool isHorizonatalPathClear(Board* b, Position S, Position D);
+	bool isDiagonalPathClear(Board* b, Position S, Position D);
 public:
-	Piece(int px, int py, PColor _c, Board* b, int c, int r, Texture2D tex);
-	void move(Position Des);
-	//virtual void Draw() = 0;
-	void Draw(int squareSize);
-	virtual bool IsLegalMove(Position D) = 0;
-	PColor getClr();
-	bool IsVertical(Position D);
-	bool IsHorizontal(Position D);
-	bool IsDiagonal(Position D);
-	bool IsVerticalPathClear(Position D);
-	bool IsHorizontalPathClear(Position D);
-	bool IsDiagonalPathClear(Position D);
-	Position GetPosition();
-	Texture2D GetTexture();
+	Piece(int _r, int _c, Board* _b, COLOUR _clr);
+	Piece(const Piece& other);
 
+	virtual void _loadTexture() = 0;
+	void setPos(Position p);
+	Position getPos()const;
 
-	
+	virtual void Draw() = 0;
+	virtual bool isLegal(Position P) = 0;
 
-};
+	void Move(Position P);
+	COLOUR getColour() const;
 
-class King :public Piece
-{
-public:
-	King(int px, int py, PColor _c, Board* b, int c, int r, Texture2D tex);
-
-	//void Draw(int squaresize);
-	bool IsLegalMove(Position D)override;
+	void color(int k);
 
 };
 
 
 
-class Queen : public Piece
+
+class Rook : virtual public Piece
 {
 public:
-	Queen(int px, int py, PColor _c, Board * b, int c, int r, Texture2D tex);
-
-	//void Draw(int squaresize);
-	bool IsLegalMove(Position D) override;
+	Rook(int _ri, int _ci, Board* B, COLOUR _clr);
+	void Draw() override;
+	bool isLegal(Position P) override;
+	void _loadTexture() override;
 
 };
 
-class Bishop :public Piece
+class Bishop :virtual public Piece
 {
 public:
-	Bishop(int px, int py, PColor _c, Board* b, int c, int r, Texture2D tex);
-
-	void Draw();
-	bool IsLegalMove(Position D) override;
+	Bishop(int _ri, int _ci, Board* B, COLOUR _clr);
+	void Draw() override;
+	bool isLegal(Position P) override;
+	void _loadTexture() override;
 
 };
 
-class Knight :public Piece
+class Queen : public Rook, public Bishop
 {
 public:
-	Knight(int px, int py, PColor _c, Board* b, int c, int r, Texture2D tex);
+	Queen(int _ri, int _ci, Board* B, COLOUR _clr);
+	void Draw() override;
 
-	void Draw();
-	bool IsLegalMove(Position D)override;
+	bool isLegal(Position D) override;
+	void _loadTexture() override;
+
+};
+
+
+class King : public Piece
+{
+public:
+	King(int _ri, int _ci, Board* B, COLOUR _clr);
+	void Draw() override;
+	bool isLegal(Position D) override;
+	void _loadTexture() override;
+};
+
+class Knight : public Piece
+{
+public:
+	Knight(int _ri, int _ci, Board* B, COLOUR _clr);
+	void Draw() override;
+	bool isLegal(Position P) override;
+	void _loadTexture() override;
 
 };
 
@@ -85,34 +102,10 @@ public:
 class Pawn : public Piece
 {
 public:
-	Pawn(int px, int py, PColor _c, Board* b, int c, int r, Texture2D tex);
-
-	//void Draw()override;
-	bool IsLegalMove(Position D)override;
-
-};
-
-class Rook :public Piece
-{
-public:
-	Rook(int px, int py, PColor _c, Board* b, int c, int r, Texture2D tex);
-
-	void Draw();
-	bool IsLegalMove(Position D)override;
+	Pawn(int _ri, int _ci, Board* B, COLOUR _clr);
+	void Draw() override;
+	bool isLegal(Position P) override;
+	void _loadTexture() override;
 
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-#endif 
 
