@@ -70,11 +70,13 @@ public:
 class Queen : public Rook, public Bishop
 {
 public:
+
 	Queen(int _ri, int _ci, Board* B, COLOUR _clr);
 	void Draw() override;
 
 	bool isLegal(Position D) override;
 	void _loadTexture() override;
+	Queen(Board* b, COLOUR clr) : Piece(0, 0, b, clr), Rook(0, 0, b, clr), Bishop(0, 0, b, clr) {}
 
 };
 

@@ -1,10 +1,16 @@
 #pragma once
-#include"Piece.h"
+#include"Peice.h"
 #include<fstream>
+
+
+enum GameMode { HUMAN_VS_HUMAN, HUMAN_VS_AI };
+
+
 
 class Board
 {
 private:
+    GameMode mode = HUMAN_VS_HUMAN;
     Piece* Ps[8][8];
     COLOUR Turn;
     Position lastMoveFrom;
@@ -28,6 +34,7 @@ private:
     Position promotionPos;
 
 public:
+    std::pair<Position, Position> getAIMove();
     Board();
     ~Board();
     void InitializeBoard();
@@ -37,7 +44,7 @@ public:
     void load_Board();
     void restart();
     bool wouldLeaveKingInCheck(Position from, Position to);
-
+    //  void setGameMode(GameMode m) { mode = m; }
     bool temp[8][8];
     void displayBoard();
     Piece* pieceAt(Position P);
@@ -75,4 +82,12 @@ public:
 
     Position getLastMoveFrom() const { return lastMoveFrom; }
     Position getLastMoveTo() const { return lastMoveTo; }
+
+
+    void setGameMode(GameMode m) { mode = m; }
+    void getAIMove(Position& from, Position& to);
+    void promoteToQueen(Position pos);
+
+    int  getPieceValue(Piece* p);
+    bool wouldGiveCheck(Position from, Position to);
 };

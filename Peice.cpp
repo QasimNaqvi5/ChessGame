@@ -79,25 +79,30 @@ bool Piece::isVerticalPathClear(Board* b, Position S, Position D)
 	}
 	return true;
 }
+
 bool Piece::isHorizonatalPathClear(Board* b, Position S, Position D)
 {
+	if (S.ri != D.ri) return false;
 
-	for (int r = S.ci + 1; r < D.ci; r++)
+	if (S.ci < D.ci)
 	{
-		if (b->pieceAt({ S.ri, r }) != nullptr)
+		for (int c = S.ci + 1; c < D.ci; c++)
 		{
-			return false;
+			if (b->pieceAt({ S.ri, c }) != nullptr)
+				return false;
 		}
 	}
-	for (int r = D.ri + 1; r < S.ri; r++)
+	else
 	{
-		if (b->pieceAt({ S.ri, r }) != nullptr)
+		for (int c = S.ci - 1; c > D.ci; c--)
 		{
-			return false;
+			if (b->pieceAt({ S.ri, c }) != nullptr)
+				return false;
 		}
 	}
 	return true;
 }
+
 bool Piece::isDiagonalPathClear(Board* b, Position S, Position D)
 {
 	int dr = S.ri - D.ri;
@@ -367,8 +372,15 @@ void Queen::Draw()
 
 bool Queen::isLegal(Position D)
 {
-	return (Rook::isLegal(D) || Bishop::isLegal(D));
+	if (isVertical(P, D))
+		return isVerticalPathClear(B, P, D);
+	if (isHorizontal(P, D))
+		return isHorizonatalPathClear(B, P, D);
+	if (isDiagonal(P, D))
+		return isDiagonalPathClear(B, P, D);
+	return false;
 }
+
 
 void Queen::_loadTexture()
 {

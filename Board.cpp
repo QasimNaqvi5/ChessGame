@@ -1,9 +1,13 @@
 
 
-
+#include<vector>
 #include "Board.h"
 #include<iostream>
 using namespace std;
+COLOUR getOpponent(COLOUR clr) {
+    return (clr == PWHITE) ? PBLACK : PWHITE;
+}
+
 
 Board::Board() : Turn(PBLACK), enPassantPossible(false),
 whiteKingMoved(false), whiteRookKingSideMoved(false), whiteRookQueenSideMoved(false),
@@ -221,25 +225,34 @@ void Board::restart() {
     load_Board();
 }
 
+
+
+
 bool Board::wouldLeaveKingInCheck(Position from, Position to) {
     Piece* movingPiece = Ps[from.ri][from.ci];
     if (!movingPiece) return true;
 
-    Piece* captured = Ps[to.ri][to.ci];
+    Piece* capturedPiece = Ps[to.ri][to.ci];
     Position originalPos = movingPiece->getPos();
 
+    // Simulate the move
     Ps[to.ri][to.ci] = movingPiece;
     Ps[from.ri][from.ci] = nullptr;
     movingPiece->setPos(to);
 
-    bool inCheck = isCheck(movingPiece->getColour());
+    bool kingInCheck = isCheck(movingPiece->getColour());
 
+    // Undo the move
     Ps[from.ri][from.ci] = movingPiece;
-    Ps[to.ri][to.ci] = captured;
+    Ps[to.ri][to.ci] = capturedPiece;
     movingPiece->setPos(originalPos);
 
-    return inCheck;
+    return kingInCheck;
 }
+
+
+
+
 
 void Board::playGUI() {
     const int screenSize = 800;
@@ -248,7 +261,6 @@ void Board::playGUI() {
     InitWindow(screenSize, screenSize, "Chess Game");
     SetTargetFPS(60);
 
-    // Ask for load from file or default
     bool fileLoaded = false;
     while (!fileLoaded) {
         BeginDrawing();
@@ -278,7 +290,6 @@ void Board::playGUI() {
     while (!WindowShouldClose()) {
         BeginDrawing();
         ClearBackground(RAYWHITE);
-
         DrawChessBoard();
 
         if (isPromoting) {
@@ -288,64 +299,122 @@ void Board::playGUI() {
             continue;
         }
 
-        if (isCheckmate(Turn)) {
-            DrawText((Turn == PWHITE ? "Black wins by checkmate!" : "White wins by checkmate!"), 100, 750, 20, RED);
-            gameOver = true;
+        if (gameOver) {
+            if (isCheckmate(PWHITE)) {
+                DrawText("Black wins by checkmate!", 200, 700, 30, RED);
+            }
+            else if (isCheckmate(PBLACK)) {
+                DrawText("White wins by checkmate!", 200, 700, 30, RED);
+            }
+            else {
+                DrawText("Game ended in stalemate!", 200, 700, 30, RED);
+            }
+            DrawText("Press ESC to exit...", 200, 740, 20, DARKGRAY);
+
+            if (IsKeyPressed(KEY_ESCAPE)) {
+                break;
+            }
+
+            EndDrawing();
+            continue;
         }
-        else if (isStalemate(Turn)) {
-            DrawText("Game ended in stalemate!", 100, 750, 20, RED);
-            gameOver = true;
-        }
-        else if (isCheck(Turn)) {
+
+        // Normal in-game messages
+        if (isCheck(Turn)) {
             DrawText((Turn == PWHITE ? "White is in check!" : "Black is in check!"), 100, 750, 20, RED);
         }
 
-        if (!gameOver) {
-            DrawText((Turn == PWHITE ? "White's Turn" : "Black's Turn"), 600, 10, 20, BLACK);
+        DrawText((Turn == PWHITE ? "White's Turn" : "Black's Turn"), 600, 10, 20, BLACK);
 
-            if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-                Vector2 mousePos = GetMousePosition();
-                int row = mousePos.y / tileSize;
-                int col = mousePos.x / tileSize;
+        
 
-                Position clicked = { row, col };
+        // AI TURN
+        if (mode == HUMAN_VS_AI && Turn == PBLACK) {
+            auto aiMove = getAIMove();
 
-                if (selectingSource) {
-                    if (validSource(clicked)) {
-                        S = clicked;
-                        sourceSelected = true;
-                        selectingSource = false;
-                    }
+            if (aiMove.first.ri != -1) {
+                updateBoard(aiMove.first, aiMove.second);
+
+                Pawn* p = dynamic_cast<Pawn*>(Ps[aiMove.second.ri][aiMove.second.ci]);
+                if (p && p->getColour() == PBLACK && aiMove.second.ri == 7) {
+                    delete Ps[aiMove.second.ri][aiMove.second.ci];
+                    Ps[aiMove.second.ri][aiMove.second.ci] = new Queen(aiMove.second.ri, aiMove.second.ci, this, PBLACK);
                 }
-                else {
-                    D = clicked;
 
-                    if (validDestination(D) &&
-                        Ps[S.ri][S.ci] &&
-                        Ps[S.ri][S.ci]->isLegal(D) &&
-                        !wouldLeaveKingInCheck(S, D)) {
+                // Check for game end before turn changes
+                if (isCheckmate(PWHITE)) {
+                    gameOver = true;
+                }
+                else if (isStalemate(PWHITE)) {
+                    gameOver = true;
+                }
 
-                        updateBoard(S, D);
+                if (!gameOver)
+                    changeTurn();
+            }
+            else {
+                // AI has no legal moves, check for game over
+                if (isCheckmate(PBLACK)) {
+                    gameOver = true;
+                }
+                else if (isStalemate(PBLACK)) {
+                    gameOver = true;
+                }
+            }
+        }
 
-                        // Check for pawn promotion
-                        Pawn* p = dynamic_cast<Pawn*>(Ps[D.ri][D.ci]);
-                        if (p && ((p->getColour() == PWHITE && D.ri == 0) ||
-                            (p->getColour() == PBLACK && D.ri == 7))) {
-                            isPromoting = true;
-                            promotionPos = D;
+
+
+        // HUMAN TURN
+        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+            Vector2 mousePos = GetMousePosition();
+            int row = mousePos.y / tileSize;
+            int col = mousePos.x / tileSize;
+
+            Position clicked = { row, col };
+
+            if (selectingSource) {
+                if (validSource(clicked)) {
+                    S = clicked;
+                    sourceSelected = true;
+                    selectingSource = false;
+                }
+            }
+            else {
+                D = clicked;
+
+                if (validDestination(D) &&
+                    Ps[S.ri][S.ci] &&
+                    Ps[S.ri][S.ci]->isLegal(D) &&
+                    (!Ps[D.ri][D.ci] || Ps[D.ri][D.ci]->getColour() != Turn) &&
+                    !wouldLeaveKingInCheck(S, D)) {
+
+                    updateBoard(S, D);
+
+                    Pawn* p = dynamic_cast<Pawn*>(Ps[D.ri][D.ci]);
+                    if (p && ((p->getColour() == PWHITE && D.ri == 0) || (p->getColour() == PBLACK && D.ri == 7))) {
+                        isPromoting = true;
+                        promotionPos = D;
+                    }
+                    else {
+                        if (isCheckmate(getOpponent(Turn)) || isStalemate(getOpponent(Turn))) {
+                            gameOver = true;
                         }
                         else {
                             changeTurn();
                         }
                     }
-                    selectingSource = true;
-                    sourceSelected = false;
                 }
-            }
 
-            if (sourceSelected) {
-                Highlight(S);
+
+
+                selectingSource = true;
+                sourceSelected = false;
             }
+        }
+
+        if (sourceSelected) {
+            Highlight(S);
         }
 
         EndDrawing();
@@ -353,6 +422,8 @@ void Board::playGUI() {
 
     CloseWindow();
 }
+
+
 
 void Board::drawPromotionMenu() {
     int menuX = promotionPos.ci * tileSize;
@@ -847,4 +918,94 @@ void Board::handleEnPassant(Position S, Position D)
             }
         }
     }
+}
+
+
+
+
+
+
+
+pair<Position, Position> Board::getAIMove() {
+    std::vector<std::pair<std::pair<Position, Position>, int>> scoredMoves;
+
+    for (int i = 0; i < 8; ++i) {
+        for (int j = 0; j < 8; ++j) {
+            Piece* piece = Ps[i][j];
+            if (piece && piece->getColour() == PBLACK) {
+                Position from = { i, j };
+
+                for (int x = 0; x < 8; ++x) {
+                    for (int y = 0; y < 8; ++y) {
+                        Position to = { x, y };
+                        Piece* target = Ps[x][y];
+
+                        if (target && target->getColour() == piece->getColour()) continue;
+                        if (piece->isLegal(to) && !wouldLeaveKingInCheck(from, to)) {
+                            int score = 0;
+
+                            // Score for capturing
+                            if (target)
+                                score += getPieceValue(target);
+
+                            //  Bonus if move gives check
+                            if (wouldGiveCheck(from, to))
+                                score += 50;
+
+                            //  Bonus for moving toward center (control)
+                            if (x >= 2 && x <= 5 && y >= 2 && y <= 5)
+                                score += 5;
+
+                            scoredMoves.push_back({ {from, to}, score });
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (scoredMoves.empty())
+        return { {-1, -1}, {-1, -1} };
+
+    // Find move with highest score
+    auto bestMove = scoredMoves[0];
+    for (auto& move : scoredMoves) {
+        if (move.second > bestMove.second)
+            bestMove = move;
+    }
+
+    return bestMove.first;
+}
+
+
+
+
+int Board::getPieceValue(Piece* p) {
+    if (dynamic_cast<Queen*>(p))   return 90;
+    if (dynamic_cast<Rook*>(p))    return 50;
+    if (dynamic_cast<Bishop*>(p))  return 30;
+    if (dynamic_cast<Knight*>(p))  return 30;
+    if (dynamic_cast<Pawn*>(p))    return 10;
+    if (dynamic_cast<King*>(p))    return 1000; // only for check detection, not capture
+    return 0;
+}
+
+bool Board::wouldGiveCheck(Position from, Position to) {
+    // Simulate move
+    Piece* movingPiece = Ps[from.ri][from.ci];
+    Piece* captured = Ps[to.ri][to.ci];
+
+    Ps[to.ri][to.ci] = movingPiece;
+    Ps[from.ri][from.ci] = nullptr;
+    Position origPos = movingPiece->getPos();
+    movingPiece->setPos(to);
+
+    bool givesCheck = isCheck(PWHITE); // Check if AI puts white in check
+
+    // Undo move
+    movingPiece->setPos(origPos);
+    Ps[from.ri][from.ci] = movingPiece;
+    Ps[to.ri][to.ci] = captured;
+
+    return givesCheck;
 }
