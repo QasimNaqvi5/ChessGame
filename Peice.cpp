@@ -80,13 +80,14 @@ bool Piece::isVerticalPathClear(Board* b, Position S, Position D)
 	return true;
 }
 
+
 bool Piece::isHorizonatalPathClear(Board* b, Position S, Position D)
 {
 	if (S.ri != D.ri) return false;
 
 	if (S.ci < D.ci)
 	{
-		for (int c = S.ci + 1; c < D.ci; c++)
+		for (int c = S.ci + 1; c < D.ci; ++c)
 		{
 			if (b->pieceAt({ S.ri, c }) != nullptr)
 				return false;
@@ -94,14 +95,16 @@ bool Piece::isHorizonatalPathClear(Board* b, Position S, Position D)
 	}
 	else
 	{
-		for (int c = S.ci - 1; c > D.ci; c--)
+		for (int c = S.ci - 1; c > D.ci; --c)
 		{
 			if (b->pieceAt({ S.ri, c }) != nullptr)
 				return false;
 		}
 	}
+
 	return true;
 }
+
 
 bool Piece::isDiagonalPathClear(Board* b, Position S, Position D)
 {
@@ -192,29 +195,29 @@ void King::_loadTexture()
 	}
 }
 
+
+
 bool King::isLegal(Position D)
 {
 	int dr = abs(this->P.ri - D.ri);
 	int dc = abs(this->P.ci - D.ci);
 
-	// Normal king move (one square in any direction)
+	// Normal king move: one square in any direction
 	if ((dr <= 1 && dc <= 1) && !(dr == 0 && dc == 0))
 	{
-		return true;
+		Piece* destPiece = B->pieceAt(D);
+		return (destPiece == nullptr || destPiece->getColour() != this->clr);
 	}
 
-	// Castling move (king moves two squares horizontally)
-	if (dr == 0 && abs(dc) == 2)
-	{
-		return true; // Actual castling validation is handled in Board::handleCastling
-	}
-
+	// Do not allow castling in isLegal(). Let Board::handleCastling handle it.
 	return false;
 }
+
 
 Knight::Knight(int _ri, int _ci, Board* _b, COLOUR _clr)
 	:Piece(_ri, _ci, _b, _clr)
 {
+	_loadTexture();
 }
 void Knight::Draw()
 {
@@ -261,6 +264,7 @@ void Knight::_loadTexture()
 Pawn::Pawn(int _ri, int _ci, Board* _b, COLOUR _clr)
 	:Piece(_ri, _ci, _b, _clr)
 {
+	_loadTexture();
 }
 
 void Pawn::Draw()
@@ -353,6 +357,8 @@ void Pawn::_loadTexture()
 
 Queen::Queen(int ri, int ci, Board* b, COLOUR clr)
 	: Piece(ri, ci, b, clr), Rook(ri, ci, b, clr), Bishop(ri, ci, b, clr) {
+	_loadTexture();
+	
 }
 
 void Queen::Draw()
@@ -372,15 +378,8 @@ void Queen::Draw()
 
 bool Queen::isLegal(Position D)
 {
-	if (isVertical(P, D))
-		return isVerticalPathClear(B, P, D);
-	if (isHorizontal(P, D))
-		return isHorizonatalPathClear(B, P, D);
-	if (isDiagonal(P, D))
-		return isDiagonalPathClear(B, P, D);
-	return false;
+	return (Rook::isLegal(D) || Bishop::isLegal(D));
 }
-
 
 void Queen::_loadTexture()
 {
@@ -402,6 +401,7 @@ void Queen::_loadTexture()
 Rook::Rook(int _ri, int _ci, Board* _b, COLOUR _clr)
 	:Piece(_ri, _ci, _b, _clr)
 {
+	_loadTexture();
 }
 void Rook::Draw()
 {
@@ -421,9 +421,19 @@ void Rook::Draw()
 
 bool Rook::isLegal(Position D)
 {
-	return((isVertical(this->P, D) && isVerticalPathClear(B, this->P, D)
-		|| (isHorizontal(this->P, D) && isHorizonatalPathClear(B, this->P, D))));
-}
+	/*return((isVertical(this->P, D) && isVerticalPathClear(B, this->P, D)
+		|| (isHorizontal(this->P, D) && isHorizonatalPathClear(B, this->P, D))));*/
+		if ((isVertical(this->P, D) && isVerticalPathClear(B, this->P, D)) ||
+			(isHorizontal(this->P, D) && isHorizonatalPathClear(B, this->P, D)))
+		{
+			Piece* destPiece = B->pieceAt(D);
+			return (destPiece == nullptr || destPiece->getColour() != this->clr);
+		}
+		return false;
+	}
+
+
+
 
 void Rook::_loadTexture()
 {
@@ -446,6 +456,7 @@ void Rook::_loadTexture()
 Bishop::Bishop(int _ri, int _ci, Board* _b, COLOUR _clr)
 	:Piece(_ri, _ci, _b, _clr)
 {
+	_loadTexture();
 }
 void Bishop::Draw()
 {

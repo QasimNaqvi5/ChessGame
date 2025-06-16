@@ -253,7 +253,6 @@ bool Board::wouldLeaveKingInCheck(Position from, Position to) {
 
 
 
-
 void Board::playGUI() {
     const int screenSize = 800;
     const int tileSize = screenSize / 8;
@@ -285,6 +284,7 @@ void Board::playGUI() {
     bool selectingSource = true;
     bool sourceSelected = false;
     bool gameOver = false;
+    std::string winner = "";
     isPromoting = false;
 
     while (!WindowShouldClose()) {
@@ -299,16 +299,18 @@ void Board::playGUI() {
             continue;
         }
 
+        if (!gameOver) {
+            if (isCheckmate(Turn)) {
+                winner = (Turn == PWHITE) ? "Black wins by checkmate!" : "White wins by checkmate!";
+                gameOver = true;
+            }
+            else if (isStalemate(Turn)) {
+                winner = "Stalemate!";
+                gameOver = true;
+            }
+        }
         if (gameOver) {
-            if (isCheckmate(PWHITE)) {
-                DrawText("Black wins by checkmate!", 200, 700, 30, RED);
-            }
-            else if (isCheckmate(PBLACK)) {
-                DrawText("White wins by checkmate!", 200, 700, 30, RED);
-            }
-            else {
-                DrawText("Game ended in stalemate!", 200, 700, 30, RED);
-            }
+            DrawText(winner.c_str(), 200, 700, 30, RED);
             DrawText("Press ESC to exit...", 200, 740, 20, DARKGRAY);
 
             if (IsKeyPressed(KEY_ESCAPE)) {
@@ -319,16 +321,13 @@ void Board::playGUI() {
             continue;
         }
 
-        // Normal in-game messages
         if (isCheck(Turn)) {
             DrawText((Turn == PWHITE ? "White is in check!" : "Black is in check!"), 100, 750, 20, RED);
         }
 
         DrawText((Turn == PWHITE ? "White's Turn" : "Black's Turn"), 600, 10, 20, BLACK);
 
-        
-
-        // AI TURN
+        // === AI TURN ===
         if (mode == HUMAN_VS_AI && Turn == PBLACK) {
             auto aiMove = getAIMove();
 
@@ -341,31 +340,31 @@ void Board::playGUI() {
                     Ps[aiMove.second.ri][aiMove.second.ci] = new Queen(aiMove.second.ri, aiMove.second.ci, this, PBLACK);
                 }
 
-                // Check for game end before turn changes
                 if (isCheckmate(PWHITE)) {
+                    winner = "Black wins by checkmate!";
                     gameOver = true;
                 }
                 else if (isStalemate(PWHITE)) {
+                    winner = "Stalemate!";
                     gameOver = true;
                 }
-
-                if (!gameOver)
+                else {
                     changeTurn();
+                }
             }
             else {
-                // AI has no legal moves, check for game over
                 if (isCheckmate(PBLACK)) {
+                    winner = "White wins by checkmate!";
                     gameOver = true;
                 }
                 else if (isStalemate(PBLACK)) {
+                    winner = "Stalemate!";
                     gameOver = true;
                 }
             }
         }
 
-
-
-        // HUMAN TURN
+        // === HUMAN TURN ===
         if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
             Vector2 mousePos = GetMousePosition();
             int row = mousePos.y / tileSize;
@@ -397,7 +396,12 @@ void Board::playGUI() {
                         promotionPos = D;
                     }
                     else {
-                        if (isCheckmate(getOpponent(Turn)) || isStalemate(getOpponent(Turn))) {
+                        if (isCheckmate(getOpponent(Turn))) {
+                            winner = (Turn == PWHITE) ? "White wins by checkmate!" : "Black wins by checkmate!";
+                            gameOver = true;
+                        }
+                        else if (isStalemate(getOpponent(Turn))) {
+                            winner = "Stalemate!";
                             gameOver = true;
                         }
                         else {
@@ -405,8 +409,6 @@ void Board::playGUI() {
                         }
                     }
                 }
-
-
 
                 selectingSource = true;
                 sourceSelected = false;
